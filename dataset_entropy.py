@@ -6,7 +6,7 @@ from scipy.stats import norm
 from scipy.spatial import distance
 from sklearn.neighbors import KDTree
 
-def calculate_dataset_entropy(dataset_x, labels):
+def calculate_dataset_entropy(dataset_x, labels, n_nearest=11):
     '''
         Calculate the dataset entropy with the features given
     '''
@@ -18,7 +18,7 @@ def calculate_dataset_entropy(dataset_x, labels):
     entropies = []
     for point in rand_points:
         this_point_prob = calculate_point_probability(dataset_x, point)
-        this_point_entropy = calculate_point_entropy(dataset_x, labels, point)
+        this_point_entropy = calculate_point_entropy(dataset_x, labels, point, n_nearest)
         entropies.append(this_point_prob * this_point_entropy)
     
     return sum(entropies)/len(entropies)
@@ -73,17 +73,21 @@ def rand_init_point(dataset_x):
         point.append(random.uniform(feature_min, feature_max))
     return np.array(point)
 
-def calculate_point_entropy(dataset_x, labels, point, num_n=10):
+def calculate_point_entropy(dataset_x, labels, point, num_n=11):
     '''
         Returns the entropy of this point
         Entropy of a point is defined to be the impurity of the num_n number of neighbors of this point
+        In the binary case num_n cannot be even to avoid an exactly == 0.5 label_average
     '''
     kdt = KDTree(dataset_x, leaf_size=30, metric='euclidean')
-    indices = kdt.query(point, k=num_n, return_distance=False)
+    indices = kdt.query([point], k=num_n, return_distance=False)
 
     # In the binary case, take average of the labels, worse if it's closer to 0.5
-    nearest_labels = [labels[i] for i in indices]
+    nearest_labels = [labels[i] for i in indices[0]] # assuming only 1 point
     label_average = sum(nearest_labels)/len(nearest_labels)
     point_entropy = 1/abs(label_average-0.5)
 
     return point_entropy
+
+test_dataset = np.array([[0, 0, 1], [1,2,0.5], [1,2,0.5], [1,2,0.5]])
+print(calculate_dataset_entropy(test_dataset, [0, 1, 1, 1], 3))
